@@ -3,10 +3,11 @@ class to manage partial 1D differential equation
 """
 
 import numpy as np
-from fvTools import linInterp, courantNo
+from finVols1D.fv.fvSchemes.divSchemes import divSchemeSelector
+from finVols1D.fv.fvTools import linInterp, courantNo
+
 
 class fvEqn:
-
 
     def __init__(self, mesh):
         """
@@ -36,8 +37,25 @@ class fvEqn:
             self._Amat[i, i] += self._mesh.dX[i] / (time.time - time.time_1)
             self._Bvec[i] += field.field[i] * self._mesh.dX0[i] / (time.time - time.time_1)
 
+
+    def addRhoDdt(self, rho, field, scheme=None):
+        """
+        Add a temporal derivative term in equation
+        """
+        if field.time==None:
+            raise ValueError(
+                "trying to add time scheme on stationary problem\n"
+                + f"to run transient case, field {field.name} "
+                + "must be associated to a time object -> "
+                + "field(name, mesh, time, ..."
+            )
+        time = field.time
+        for i in range(self._mesh.nCells):
+            self._Amat[i, i] += self._mesh.dX[i] * rho.field[i] / (time.time - time.time_1)
+            self._Bvec[i] += rho.field0[i] * field.field[i] * self._mesh.dX0[i] / (time.time - time.time_1)
+
     
-    def addDiv(self, phi, field, scheme=None):
+    def addDiv(self, phi, field, scheme="upwind"):
         """
         Add a divergence term to matrix system
         Inputs:
@@ -48,13 +66,35 @@ class fvEqn:
         meanCo, maxCo, minCo = courantNo(phi, phi.time._dt)
         print(f"- Courant number, div({phi.name},{field.name}): mean={round(meanCo, 5)}"
               + f", max={round(maxCo, 5)}, min={round(minCo, 5)}")
-        for i in range(1, self._mesh.nFaces-1):
-            if phi[i] >= 0:
-                self._Amat[i-1, i-1] += phi[i]
-                self._Amat[i, i-1] -= phi[i]
+        divScheme = divSchemeSelector(scheme)
+        divScheme.addDiv(self, phi, field)
+        
+        if field.bc0.name == "cyclic":
+            if phi[0] >= 0:
+                self._Amat[0, -1] -= phi[0]
+                self._Amat[-1, -1] += phi[0]
             else:
-                self._Amat[i, i] -= phi[i]
-                self._Amat[i-1, i] += phi[i]
+                self._Amat[0, 0] -= phi[0]
+                self._Amat[-1, 0] += phi[0]
+        else:
+            field.bc0.correctBCdiv(self, phi)
+            field.bcN.correctBCdiv(self, phi)
+
+
+    def addRhoDiv(self, rho, phi, field, scheme="upwind"):
+        """
+        Add a divergence term to matrix system
+        Inputs:
+            rho: fvField, density field
+            phi: surfaceField
+            field: fvField
+            scheme: default is upwind
+        """
+        meanCo, maxCo, minCo = courantNo(phi, phi.time._dt)
+        print(f"- Courant number, div({phi.name},{field.name}): mean={round(meanCo, 5)}"
+              + f", max={round(maxCo, 5)}, min={round(minCo, 5)}")
+        divScheme = divSchemeSelector(scheme)
+        divScheme.addRhoDiv(self, rho, phi, field)
         
         if field.bc0.name=="cyclic":
             if phi[0] >= 0:
@@ -105,7 +145,7 @@ class fvEqn:
         Inputs:
             field: fvField, source term
         """
-        self._Bvec[:] += field.field[:]# * self._mesh.dX
+        self._Bvec[:] += field.field[:]
 
             
     def solve(self):
@@ -117,8 +157,3 @@ class fvEqn:
         """Reset the matrix system to zero"""
         self._Amat = np.zeros((self._mesh.nCells, self._mesh.nCells))
         self._Bvec = np.zeros(self._mesh.nCells)
-            
-        
-
-
-    

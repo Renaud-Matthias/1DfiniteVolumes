@@ -4,9 +4,9 @@ motion of mesh prescribing boundary faces motion
 """
 
 import numpy as np
-from fvEquations import fvEqn
-from fvFields import fvField, surfaceField
-from runTime import runTime
+#from fvFields import fvField, surfaceField
+#from finVols1D import fvEquations as fvEqn
+
 
 class fvMesh:
     

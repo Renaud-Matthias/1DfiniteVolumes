@@ -28,34 +28,32 @@ def linInterp(mesh, field):
     return phiLI
 
 
-def getGradCells(mesh, phi, phiTop=0, phiBot=0):
+def getGradCells(field):
     """
-    compute gradient of field phi at cell centers from faces values
+    compute gradient of field at cell centers from faces values
     linear interpolation is used to get phi on faces
     Inputs:
-        mesh: fvMesh
-        phi: surfaceField
+    - field: fvField
     """
-    # mesh data
-    ncells = len(dzCells)
-    # compute gradient
-    phiF = linInterp(mesh, phi)  # phi value on faces, linear interpolation
+    mesh = field.mesh
+    # get surfaceField, linear interpolation and BC
+    phi = fvFields.surfaceField("phi", field.mesh, field)
+    
     grad = np.zeros(mesh.nCells)  # gradient at cell centers
-    grad[:-1] += phiF
-    grad[1:] -= phiF
-    # boundary condition
-    grad[0] -= phiBot
-    grad[-1] += phiTop
-    grad /= dzCells
+    grad += phi[1:]
+    grad -= phi[:-1]
+    grad /= mesh.dX
     return grad
 
 
-def getGradFaces(mesh, phi):
-    """compute gradient of field phi at internal faces
-    from values of phi at neighbour cells"""
-    # mesh data
-    Zcells = mesh["zcells"]
-    ncells = len(Zcells)
-    # compute gradient
-    grad = (phi[1:] - phi[:-1]) / (Zcells[1:] - Zcells[:-1])
+def getGradFaces(field):
+    """
+    compute gradient of field on mesh faces
+    from values of phi at neighbour cells
+    Inputs:
+    - field: fvField
+    """
+    mesh = field.mesh
+    grad = np.zeros(mesh.nFaces)
+    #grad[1:-1] = (field[1:] - field[:-1]) / (Zcells[1:] - Zcells[:-1])
     return grad
