@@ -6,18 +6,15 @@ problem solution: Rouse profile
 
 import numpy as np
 import matplotlib.pyplot as plt
+from finVols1D import fv
+from finVols1D.runTime import runTime
 
-import sys
-sys.path.append("../src/")
-from fvMesh import fvMesh
-from fvFields import fvField, surfaceField
-from fvEquations import fvEqn
-from runTime import runTime
+plt.rcParams["font.size"] = 15
 
 # physical parameters
 kappa = 0.41  # von karmann constant
 Hwater = 0.1  # water depth
-uf = 0.02  # friction velocity (m/s)
+uf = 0.01  # friction velocity (m/s)
 ws = -0.01  # settling velocity
 csRef = 0.3  # reference concentration
 aRef = 0.05 * Hwater  # reference height
@@ -31,13 +28,13 @@ time = runTime(
 
 # create mesh
 cellFaces = np.linspace(aRef, Hwater, 200)
-mesh = fvMesh(cellFaces, time)
+mesh = fv.fvMesh(cellFaces, time)
 
 
 # create a field
 Cs0 = np.zeros(mesh.nCells)
 #Cs0 = 0.01 * (1 + np.tanh((mesh.Xcells - 0.5*Hwater)/0.002))  # initial field values
-CsField = fvField(
+CsField = fv.fvField(
     "Cs", mesh, time,
     bc0={"type":"fixedGradient", "value":0.},
     bcN={"type":"fixedGradient", "value":0.},
@@ -45,40 +42,38 @@ CsField = fvField(
 )
 
 # settling velocity field
-WsField = fvField(
+WsField = fv.fvField(
     "Ws", mesh, time,
     bc0={"type":"fixedGradient", "value":0.},
     bcN={"type":"fixedValue", "value":0.},
     values=np.ones(mesh.nCells) * ws
 )
-phiWs = surfaceField("Ws", mesh, WsField)
+phiWs = fv.surfaceField("Ws", mesh, WsField)
 
 # diffusivity
-nut = fvField(
+nut = fv.fvField(
     "nut", mesh, time,
     bc0={"type":"fixedValue", "value":0.},
     bcN={"type":"fixedValue", "value":0.},
     values = kappa * uf * mesh.Xcells * (1 - mesh.Xcells/Hwater))
-nutFaces = surfaceField("nut", mesh, nut)
+nutFaces = fv.surfaceField("nut", mesh, nut)
 
 # prepare equations to solve
-CsEqn = fvEqn(mesh)
+CsEqn = fv.fvEqn(mesh)
 
-while time.loop():
-    print(time)
-    # reference concentration
-    csRefArr = np.zeros(mesh.nCells)
-    csRefArr[0] = csRef * np.abs(ws)
-    erosion = fvField(
-        "nut", mesh, time,
-        values = csRefArr
-    )
-    CsEqn.addDdt(CsField)
-    CsEqn.addDiv(phiWs, CsField)
-    CsEqn.addLaplacian(nutFaces, CsField)
-    CsEqn.addSource(erosion)
-    CsField.update(CsEqn.solve())
-    CsEqn.reset()
+# reference concentration
+csRefArr = np.zeros(mesh.nCells)
+csRefArr[0] = csRef * np.abs(ws)
+erosion = fv.fvField(
+    "nut", mesh, time,
+    values = csRefArr
+)
+
+CsEqn.addDiv(phiWs, CsField)
+CsEqn.addLaplacian(nutFaces, CsField)
+CsEqn.addSource(erosion)
+CsField.update(CsEqn.solve())
+CsEqn.reset()
 
 Ro = np.abs(ws / (uf*kappa))  # Rouse number
 print(f"Rouse number : {Ro}")

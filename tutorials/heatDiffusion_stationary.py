@@ -4,14 +4,10 @@ A simple stationnary heat diffusion problem
 
 import numpy as np
 import matplotlib.pyplot as plt
+from finVols1D import fv
+from finVols1D.runTime import runTime
 
-import sys
-sys.path.append("../src/")
-
-from fvMesh import fvMesh
-from fvFields import fvField, surfaceField
-from fvEquations import fvEqn
-from runTime import runTime
+plt.rcParams["font.size"] = 15
 
 
 # create time control
@@ -23,12 +19,12 @@ time = runTime(
 
 # create mesh
 cellFaces = np.linspace(0, 1, 100)
-mesh = fvMesh(cellFaces, time)
+mesh = fv.fvMesh(cellFaces, time)
 
 
 # create a field
 T0 = np.zeros(mesh.nCells)  # initial field values
-Tfield = fvField(
+Tfield = fv.fvField(
     "T", mesh, time,
     bc0={"type":"fixedValue", "value":0.},
     bcN={"type":"fixedGradient", "value":1.},
@@ -36,11 +32,11 @@ Tfield = fvField(
 )
 
 # diffusivity
-diffCells = fvField("D", mesh, time, 0.01)
-diffFaces = surfaceField("D", mesh, diffCells)
+diffCells = fv.fvField("D", mesh, time, 0.01)
+diffFaces = fv.surfaceField("D", mesh, diffCells)
 
 # prepare equations to solve
-TEqn = fvEqn(mesh)
+TEqn = fv.fvEqn(mesh)
 TEqn.addLaplacian(diffFaces, Tfield)
 Tfield.update(TEqn.solve())
 
