@@ -3,6 +3,7 @@ Function to handle matrix for 1D finite volumes
 """
 
 import numpy as np
+import finVols1D.fv.fvFields
 
 
 def courantNo(phi, dt):
@@ -37,7 +38,7 @@ def getGradCells(field):
     """
     mesh = field.mesh
     # get surfaceField, linear interpolation and BC
-    phi = fvFields.surfaceField("phi", field.mesh, field)
+    phi = finVols1D.fv.fvFields.surfaceField("phi", field.mesh, field)
     
     grad = np.zeros(mesh.nCells)  # gradient at cell centers
     grad += phi[1:]

@@ -114,7 +114,7 @@ class fixedGradientBC(fvBC):
 @fvBC.register_BC_type("zeroGradient")
 class zeroGradientBC(fixedGradientBC):
 
-    def __init__(self, side):
+    def __init__(self, bcDict, side):
         super(zeroGradientBC, self).__init__({"value":0.}, side)
         self.name = "zeroGradient"
 

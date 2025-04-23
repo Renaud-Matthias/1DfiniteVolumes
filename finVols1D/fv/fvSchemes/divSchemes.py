@@ -3,26 +3,31 @@ class to manage various divergence schemes
 """
 
 from finVols1D.fv.fvTools import getGradCells
+from abc import ABC, abstractmethod
 
 
-def divSchemeSelector(schemeName):
-    """
-    Inputs:
-    - schemeName: str, name of divergence scheme
-    """
-    if schemeName=="linear":
-        return linear()
-    elif schemeName=="upwind":
-        return upwind()
-    elif schemeName=="linearUpwind":
-        return linearUpwind()
-    else:
-        raise ValueError(f"scheme {schemeName} not available")
+class divScheme(ABC):
+
+    divSchemes_types = {}
+    @classmethod
+    def register_divScheme_type(cls, divScheme_type):
+        def decorator(subclass):
+            cls.divSchemes_types[divScheme_type] = subclass
+            return subclass
+        return decorator
+
+    @classmethod
+    def create(cls, schemeName, ):
+        if schemeName not in cls.divSchemes_types:
+            raise ValueError(
+                "divergence scheme  not supported: " + schemeName)
+        return cls.divSchemes_types[schemeName]()
 
 
 # - - - LINEAR SCHEME - - - #
 
-class linear:
+@divScheme.register_divScheme_type("linear")
+class linear(divScheme):
 
     def addDiv(self, eqn, phi, field):
         """
@@ -57,7 +62,8 @@ class linear:
 
 # - - - UPWIND SCHEME - - - #
 
-class upwind:
+@divScheme.register_divScheme_type("upwind")
+class upwind(divScheme):
 
     def addDiv(self, eqn, phi, field):
         """
@@ -76,7 +82,8 @@ class upwind:
 
 
 # - - - LINEAR-UPWIND SCHEME - - - #
-                
+
+@divScheme.register_divScheme_type("linearUpwind")
 class linearUpwind(upwind):
 
     def addDiv(self, eqn, phi, field):
@@ -91,20 +98,12 @@ class linearUpwind(upwind):
         grad = getGradCells(field)
         for i in range(1, mesh.nFaces-1):
             if phi[i]>=0:
-                eqn._Bvec[i] += (mesh.Xfaces[i]-mesh.Xcells[i-1]) * grad[i-1]
-                eqn._Bvec[i] -= (mesh.Xfaces[i]-mesh.Xcells[i-1]) * grad[i-1]
+                eqn._Bvec[i] += (
+                    mesh.Xfaces[i]-mesh.Xcells[i-1]) * grad[i-1]
+                eqn._Bvec[i] -= (
+                    mesh.Xfaces[i]-mesh.Xcells[i-1]) * grad[i-1]
             elif phi[i]<0:
-                eqn._Bvec[i] += (mesh.Xfaces[i]-mesh.Xcells[i-1]) * grad[i]
-                eqn._Bvec[i] -= (mesh.Xfaces[i]-mesh.Xcells[i-1]) * grad[i]
-
-
-# - - - LIMITED SCHEME - - - #
-
-class limited(linear, upwind):
-
-    def __init__(self, beta=0.):
-        self._beta = beta
-
-
-    def addDiv(self, eqn, phi, field):
-        pass
+                eqn._Bvec[i] += (
+                    mesh.Xfaces[i]-mesh.Xcells[i-1]) * grad[i]
+                eqn._Bvec[i] -= (
+                    mesh.Xfaces[i]-mesh.Xcells[i-1]) * grad[i]

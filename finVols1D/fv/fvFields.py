@@ -3,8 +3,8 @@ Class to manage finite volume fields
 """
 
 import numpy as np
-from .fvTools import linInterp
-from .fvBoundaries import fvBC, zeroGradientBC
+from finVols1D.fv.fvTools import linInterp
+from finVols1D.fv.fvBoundaries import fvBC, zeroGradientBC
 
 
 class fvField:
@@ -33,8 +33,8 @@ class fvField:
         self.mesh = mesh
         self.time = time
         self.field = np.zeros(self.mesh.nCells)
-        self.field0 = None  # field at previous time step
-        self.field00 = None  # field two time step before
+        self.field0 = None  # field at time step n-1 (previous)
+        self.field00 = None  # field at time step n-2
         self._initialize(values=values)
         self._setBC(bc0, bcN)
 
@@ -65,12 +65,12 @@ class fvField:
     def _setBC(self, bc0Dict, bcNDict):
         """Set boundary conditions"""
         if bc0Dict == None:
-            self.bc0 = zeroGradientBC(side=0)
+            self.bc0 = zeroGradientBC(bc0Dict, side=0)
         else:
             self.bc0 = fvBC.create(bc0Dict, side=0)
 
         if bcNDict == None:
-            self.bcN = zeroGradientBC(side=-1)
+            self.bcN = zeroGradientBC(bcNDict, side=-1)
         else:
             self.bcN = fvBC.create(bcNDict, side=-1)
         # check number of cyclic boundary, must be 0 or 2
