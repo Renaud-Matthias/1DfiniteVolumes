@@ -3,8 +3,8 @@ class to manage partial 1D differential equation
 """
 
 import numpy as np
-from finVols1D.fv.fvSchemes.divSchemes import divSchemeSelector
 from finVols1D.fv.fvTools import linInterp, courantNo
+from finVols1D.fv.fvSchemes.divSchemes import divScheme
 
 
 class fvEqn:
@@ -66,8 +66,9 @@ class fvEqn:
         meanCo, maxCo, minCo = courantNo(phi, phi.time._dt)
         print(f"- Courant number, div({phi.name},{field.name}): mean={round(meanCo, 5)}"
               + f", max={round(maxCo, 5)}, min={round(minCo, 5)}")
-        divScheme = divSchemeSelector(scheme)
-        divScheme.addDiv(self, phi, field)
+        # scheme for divergence
+        divS = divScheme.create(scheme)
+        divS.addDiv(self, phi, field)
         
         if field.bc0.name == "cyclic":
             if phi[0] >= 0:
@@ -93,8 +94,9 @@ class fvEqn:
         meanCo, maxCo, minCo = courantNo(phi, phi.time._dt)
         print(f"- Courant number, div({phi.name},{field.name}): mean={round(meanCo, 5)}"
               + f", max={round(maxCo, 5)}, min={round(minCo, 5)}")
-        divScheme = divSchemeSelector(scheme)
-        divScheme.addRhoDiv(self, rho, phi, field)
+        # scheme for divergence
+        divS = divSchemeSelector(scheme)
+        divS.addRhoDiv(self, rho, phi, field)
         
         if field.bc0.name=="cyclic":
             if phi[0] >= 0:
